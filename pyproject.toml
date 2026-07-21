@@ -1,0 +1,10 @@
+[project]
+name = "modal-explore"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "modal>=1.5.2",
+    "openml>=0.15.1",
+    "tabpfn>=8.1.0",
+]
