@@ -1,21 +1,26 @@
 import modal
+import pathlib
 import secrets
 import time
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 
 from auth import verify_invite, sign_session, read_session
 from state import get_invite, put_invite
 
 
+DEMOS = ["hi"]
 SESSION_TTL = 28800  # 8 hrs
+TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
 
 image = (
     modal.Image.debian_slim()
     .uv_pip_install(["fastapi", "itsdangerous", "jinja2", "python-multipart"])
     .add_local_python_source("auth", "state")
+    .add_local_dir(TEMPLATES_DIR, remote_path="/root/templates")
 )
 app = modal.App(
     name="gateway",
@@ -23,7 +28,24 @@ app = modal.App(
     secrets=[modal.Secret.from_name("gateway")],
 )
 
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
 web = FastAPI()
+
+def _expired():
+    return HTTPException(status_code=303, headers={"location": "/expired"})
+
+def require_session(request: Request) -> dict:
+    if (cookie := request.cookies.get("session")) is None:
+        raise _expired()
+    if (session := read_session(cookie)) is None:
+        raise _expired()
+    if (invite := get_invite(session["iid"])) is None:
+        raise _expired()
+    if invite["revoked"]:
+        raise _expired()
+    return {"session": session, "invite": invite}
+
 
 @web.get("/")
 async def hello():
@@ -34,20 +56,20 @@ async def healthz():
     return {"ok": True}
 
 @web.get("/i/{token}")
-def redeem(token):
+def redeem(token: str):
     # verify invite
     if (content := verify_invite(token)) is None:
-        return RedirectResponse(url="/expired")
+        raise _expired()
 
     # check invite status
     iid = content["iid"]
     if (record := get_invite(iid)) is None:
-        return RedirectResponse(url="/expired")
+        raise _expired()
     if record["revoked"]:
-        return RedirectResponse(url="/expired")
+        raise _expired()
     now = int(time.time())
     if record["expires"] <= now:
-        return RedirectResponse(url="/expired")
+        raise _expired()
     if record["redeemed_at"] is None:
         record["redeemed_at"] = now
         put_invite(iid, record)
@@ -72,12 +94,12 @@ def expired():
     return PlainTextResponse("This link has expired.")
 
 @web.get("/menu")
-async def menu(request: Request):
-    if (cookie := request.cookies.get("session")) is None:
-        return RedirectResponse(url="/expired")
-    if (payload := read_session(cookie)) is None:
-        return RedirectResponse(url="/expired")
-    return payload
+def menu(request: Request, session: dict = Depends(require_session)):
+    return templates.TemplateResponse(
+        request=request,
+        name="menu.html",
+        context={"demos": DEMOS, **session},
+    )
 
 @app.function()
 @modal.concurrent(max_inputs=3)
