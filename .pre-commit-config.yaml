@@ -1,0 +1,23 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.8   # run `pre-commit autoupdate` to pin the latest
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^gateway/
+      - id: ruff-format
+        files: ^gateway/
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (gateway)
+        entry: bash -c 'cd gateway && .venv/bin/mypy .'
+        language: system
+        files: ^gateway/.*\.py$
+        pass_filenames: false
+      - id: pytest
+        name: pytest (gateway)
+        entry: gateway/.venv/bin/python -m pytest gateway/tests -q
+        language: system
+        files: ^gateway/
+        pass_filenames: false
