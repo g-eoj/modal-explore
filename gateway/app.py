@@ -9,7 +9,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from auth import read_session, sign_session, verify_invite
-from state import get_invite, put_invite
+from state import get_invite
 
 DEMOS = ["hi"]
 SESSION_TTL = 28800  # 8 hrs
@@ -18,7 +18,7 @@ TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
 image = (
     modal.Image.debian_slim()
-    .uv_pip_install(["fastapi", "itsdangerous", "jinja2", "python-multipart"])
+    .uv_sync(extra_options="--no-dev")
     .add_local_python_source("auth", "state")
     .add_local_dir(TEMPLATES_DIR, remote_path="/root/templates")
 )
@@ -67,20 +67,17 @@ def redeem(token: str):
 
     # check invite status
     iid = content["iid"]
-    if (record := get_invite(iid)) is None:
+    if (invite := get_invite(iid)) is None:
         raise _expired()
-    if record["revoked"]:
+    if invite["revoked"]:
         raise _expired()
     now = int(time.time())
-    if record["expires"] <= now:
+    if invite["expires"] <= now:
         raise _expired()
-    if record["redeemed_at"] is None:
-        record["redeemed_at"] = now
-        put_invite(iid, record)
 
     # start session
     sid = secrets.token_hex(8)
-    exp = min(now + SESSION_TTL, record["expires"])
+    exp = min(now + SESSION_TTL, invite["expires"])
     cookie = sign_session(iid, sid, exp)
     r = RedirectResponse(url="/menu", status_code=303)
     r.set_cookie(

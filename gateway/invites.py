@@ -10,10 +10,10 @@ load_dotenv()
 
 @app.local_entrypoint()
 def create(label: str, days: int = 1, budget_s: int = 60):
+    url = modal.Function.from_name("gateway", "fastapi_app").get_web_url()
     iid, invite = new_invite(label=label, days=days, budget_s=budget_s)
     put_invite(iid, invite)
     token = sign_invite(iid, invite["expires"])
-    url = modal.Function.from_name("gateway", "fastapi_app").get_web_url()
     print(f"{url}/i/{token}")
 
 
