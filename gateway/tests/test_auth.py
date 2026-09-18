@@ -1,4 +1,5 @@
 import pytest
+
 from auth import read_session, sign_invite, sign_session, verify_invite
 
 NOW = 1_700_000_000

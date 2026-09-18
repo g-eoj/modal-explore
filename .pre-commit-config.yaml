@@ -2,7 +2,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.8   # run `pre-commit autoupdate` to pin the latest
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
         files: ^gateway/
       - id: ruff-format

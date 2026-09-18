@@ -4,10 +4,11 @@ import time
 from typing import Annotated
 
 import modal
-from auth import read_session, sign_session, verify_invite
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
+from auth import read_session, sign_session, verify_invite
 from state import get_invite, put_invite
 
 DEMOS = ["hi"]

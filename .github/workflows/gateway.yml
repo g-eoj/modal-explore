@@ -1,0 +1,39 @@
+name: gateway
+
+on:
+  pull_request:
+    paths: ["gateway/**", ".github/workflows/gateway.yml"]
+  push:
+    branches: ["main"]
+    paths: ["gateway/**", ".github/workflows/gateway.yml"]
+
+defaults:
+  run:
+    working-directory: "gateway"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy .
+      - run: uv run pytest tests -q
+
+  deploy:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --no-dev
+      - run: uv run modal deploy app.py
