@@ -1,14 +1,16 @@
 import modal
 from dotenv import load_dotenv
 
-from app import app
 from auth import sign_invite
 from state import get_invite, list_invites, new_invite, put_invite
 
 load_dotenv()
 
 
-@app.local_entrypoint()
+cli = modal.App(name="gateway-invites-cli")
+
+
+@cli.local_entrypoint()
 def create(label: str, days: int = 1, budget_s: int = 60):
     url = modal.Function.from_name("gateway", "fastapi_app").get_web_url()
     iid, invite = new_invite(label=label, days=days, budget_s=budget_s)
@@ -17,14 +19,14 @@ def create(label: str, days: int = 1, budget_s: int = 60):
     print(f"{url}/i/{token}")
 
 
-@app.local_entrypoint(name="list")
+@cli.local_entrypoint(name="list")
 def ls():
     invites = list_invites()
     for invite in invites:
         print(invite)
 
 
-@app.local_entrypoint()
+@cli.local_entrypoint()
 def revoke(iid: str):
     invite = get_invite(iid)
     if invite is None:
