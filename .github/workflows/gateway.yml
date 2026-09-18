@@ -35,5 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - run: uv sync --locked --no-dev
-      - run: uv run modal deploy app.py
+      - run: uv run --locked --no-dev modal deploy app.py
