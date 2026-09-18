@@ -11,13 +11,13 @@ repos:
     hooks:
       - id: mypy
         name: mypy (gateway)
-        entry: bash -c 'cd gateway && .venv/bin/mypy .'
+        entry: uv run --directory gateway mypy .
         language: system
         files: ^gateway/.*\.py$
         pass_filenames: false
       - id: pytest
         name: pytest (gateway)
-        entry: gateway/.venv/bin/python -m pytest gateway/tests -q
+        entry: uv run --directory gateway pytest tests -q
         language: system
         files: ^gateway/
         pass_filenames: false
