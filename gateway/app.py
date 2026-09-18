@@ -9,7 +9,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from auth import read_session, sign_session, verify_invite
-from state import get_invite
+from state import get_invite, is_invite_valid
 
 DEMOS = ["hi"]
 SESSION_TTL = 28800  # 8 hrs
@@ -38,13 +38,14 @@ def _expired():
 
 
 def require_session(request: Request) -> dict:
+    now = int(time.time())
     if (cookie := request.cookies.get("session")) is None:
         raise _expired()
     if (session := read_session(cookie)) is None:
         raise _expired()
     if (invite := get_invite(session["iid"])) is None:
         raise _expired()
-    if invite["revoked"]:
+    if not is_invite_valid(invite, now):
         raise _expired()
     return {"session": session, "invite": invite}
 
@@ -69,10 +70,8 @@ def redeem(token: str):
     iid = content["iid"]
     if (invite := get_invite(iid)) is None:
         raise _expired()
-    if invite["revoked"]:
-        raise _expired()
     now = int(time.time())
-    if invite["expires"] <= now:
+    if not is_invite_valid(invite, now):
         raise _expired()
 
     # start session

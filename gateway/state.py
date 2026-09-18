@@ -43,3 +43,11 @@ def list_invites() -> list[tuple[str, dict]]:
         if iid.startswith(INVITE_PREFIX):
             invites.append((iid.removeprefix(INVITE_PREFIX), record))
     return invites
+
+
+def is_invite_valid(invite: dict, now: int) -> bool:
+    if invite["revoked"]:
+        return False
+    if invite["expires"] <= now:
+        return False
+    return True
